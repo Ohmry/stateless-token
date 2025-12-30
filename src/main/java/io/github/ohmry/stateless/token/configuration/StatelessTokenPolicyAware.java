@@ -1,4 +1,4 @@
-package io.github.ohmry.stateless.token.config;
+package io.github.ohmry.stateless.token.configuration;
 
 public interface StatelessTokenPolicyAware {
     void setStatelessTokenPolicy(StatelessTokenPolicy statelessTokenPolicy);

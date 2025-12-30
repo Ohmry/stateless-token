@@ -1,9 +1,11 @@
 package io.github.ohmry.stateless.token.domain;
 
-import io.github.ohmry.stateless.token.config.StatelessTokenPolicy;
-import io.github.ohmry.stateless.token.config.StatelessTokenPolicyHolder;
+import com.fasterxml.jackson.core.type.TypeReference;
+import io.github.ohmry.stateless.token.configuration.StatelessTokenPolicy;
+import io.github.ohmry.stateless.token.configuration.StatelessTokenPolicyHolder;
 
 import javax.crypto.SecretKey;
+import java.lang.reflect.Type;
 
 public class AccessToken<T> extends Token<T> {
     public AccessToken(SecretKey secretKey, T subject, long timeout) {
@@ -11,6 +13,10 @@ public class AccessToken<T> extends Token<T> {
     }
     
     public AccessToken(SecretKey secretKey, String tokenValue, Class<T> subjectType) {
+        super(secretKey, tokenValue, subjectType);
+    }
+
+    public AccessToken(SecretKey secretKey, String tokenValue, TypeReference<T> subjectType) {
         super(secretKey, tokenValue, subjectType);
     }
     
@@ -25,6 +31,11 @@ public class AccessToken<T> extends Token<T> {
     }
     
     public static<T> AccessToken<T> parse(String tokenValue, Class<T> subjectType) {
+        StatelessTokenPolicy policy = StatelessTokenPolicyHolder.getStatelessTokenPolicy();
+        return new AccessToken<>(policy.getAccessTokenSecretKey(), tokenValue, subjectType);
+    }
+
+    public static<T> AccessToken<T> parse(String tokenValue, TypeReference<T> subjectType) {
         StatelessTokenPolicy policy = StatelessTokenPolicyHolder.getStatelessTokenPolicy();
         return new AccessToken<>(policy.getAccessTokenSecretKey(), tokenValue, subjectType);
     }

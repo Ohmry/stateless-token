@@ -13,7 +13,8 @@
     <artifactId>stateless-token</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    
+
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>A Spring Boot library that provides easy-to-use JWT token objects (AccessToken and RefreshToken) with minimal configuration. Simplifies JWT token creation and validation by abstracting away the complexity of JWT library implementation.</description>
     <url>https://github.com/Ohmry/stateless-token</url>
     
@@ -117,13 +118,37 @@
                 <version>3.6.0</version>
                 <configuration>
                     <source>17</source>
-                    <target>17</target>
                 </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
                         <goals>
                             <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
                         </goals>
                     </execution>
                 </executions>

@@ -1,6 +1,12 @@
 package io.github.ohmry.stateless.token.configuration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -15,11 +21,12 @@ import org.springframework.util.StringUtils;
  */
 @Configuration
 public class StatelessTokenPolicyConfiguration {
+    private static final Logger logger = LoggerFactory.getLogger(StatelessTokenPolicyConfiguration.class);
+
     /**
      * Default constructor.
      */
-    public StatelessTokenPolicyConfiguration() {
-    }
+    public StatelessTokenPolicyConfiguration() {}
 
     /**
      * Creates a StatelessTokenPolicy bean from application properties.
@@ -64,10 +71,12 @@ public class StatelessTokenPolicyConfiguration {
         }
 
         if (!StringUtils.hasText(accessTokenSecret)) {
+            logger.debug("stateless.accessToken.secret not provided. Using stateless.token.secret as default.");
             accessTokenSecret = tokenSecret;
         }
 
         if (!StringUtils.hasText(refreshTokenSecret)) {
+            logger.debug("stateless.refreshToken.secret not provided. Using stateless.token.secret as default.");
             refreshTokenSecret = tokenSecret;
         }
 
@@ -87,12 +96,69 @@ public class StatelessTokenPolicyConfiguration {
 
         if (accessTokenTimeout != null) {
             builder.accessTokenTimeout(accessTokenTimeout);
+        } else {
+            logger.debug("stateless.accessToken.timeout not provided. Using stateless.token.timeout as default.");
         }
 
         if (refreshTokenTimeout != null) {
             builder.refreshTokenTimeout(refreshTokenTimeout);
+        } else {
+            logger.debug("stateless.refreshToken.timeout not provided. Using stateless.token.timeout as default.");
         }
 
+        logger.info("Initialized StatelessTokenPolicyConfiguration.");
         return builder.build();
+    }
+
+    /**
+     * Creates a StatelessTokenPolicyHolder bean.
+     * This bean maintains a static reference to the StatelessTokenPolicy.
+     *
+     * @return a StatelessTokenPolicyHolder instance
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public StatelessTokenPolicyHolder statelessTokenPolicyHolder() {
+        logger.debug("Creating StatelessTokenPolicyHolder bean.");
+        return new StatelessTokenPolicyHolder();
+    }
+
+    /**
+     * Creates a BeanPostProcessor that injects StatelessTokenPolicy into all beans
+     * that implement StatelessTokenPolicyAware.
+     *
+     * @return a BeanPostProcessor instance
+     */
+    @Bean
+    public BeanPostProcessor statelessTokenPolicyAwareProcessor() {
+        return new StatelessTokenPolicyAwareBeanPostProcessor();
+    }
+
+    /**
+     * BeanPostProcessor implementation that injects StatelessTokenPolicy into beans
+     * implementing StatelessTokenPolicyAware.
+     */
+    private static class StatelessTokenPolicyAwareBeanPostProcessor implements BeanPostProcessor, ApplicationContextAware {
+        private ApplicationContext applicationContext;
+        private static final Logger logger = LoggerFactory.getLogger(StatelessTokenPolicyAwareBeanPostProcessor.class);
+
+        @Override
+        public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+            this.applicationContext = applicationContext;
+        }
+
+        @Override
+        public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+            if (bean instanceof StatelessTokenPolicyAware) {
+                try {
+                    StatelessTokenPolicy policy = applicationContext.getBean(StatelessTokenPolicy.class);
+                    ((StatelessTokenPolicyAware) bean).setStatelessTokenPolicy(policy);
+                    logger.debug("Injected StatelessTokenPolicy into bean: {}", beanName);
+                } catch (BeansException e) {
+                    logger.warn("Could not inject StatelessTokenPolicy into bean: {}. StatelessTokenPolicy bean may not be available yet.", beanName);
+                }
+            }
+            return bean;
+        }
     }
 }

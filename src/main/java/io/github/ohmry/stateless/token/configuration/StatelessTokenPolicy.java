@@ -1,10 +1,19 @@
 package io.github.ohmry.stateless.token.configuration;
 
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.MacAlgorithm;
+import io.jsonwebtoken.security.WeakKeyException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Objects;
+
+import static java.util.Base64.getEncoder;
 
 /**
  * Configuration policy for stateless tokens.
@@ -141,6 +150,20 @@ public class StatelessTokenPolicy {
             this.refreshTokenTimeoutSeconds = null;
         }
 
+        private void handleWeakKeyException(String secretName) {
+            SecureRandom secureRandom = new SecureRandom();
+            byte[] key = new byte[64];
+            secureRandom.nextBytes(key);
+            String randomSecret = Base64.getEncoder().encodeToString(key);
+
+            String stringBuilder = "The " + secretName + "string is too weak to be used as a secret key. You must use a string that is at least 64 bytes long" +
+                    "\n\n" +
+                    "You can create a secret key by using the random value below." + "\n\n\t" +
+                    randomSecret + "\n";
+            Logger logger = LoggerFactory.getLogger(this.getClass());
+            logger.error(stringBuilder);
+        }
+
         /**
          * Sets the secret key for general tokens.
          *
@@ -148,7 +171,13 @@ public class StatelessTokenPolicy {
          * @return this builder instance
          */
         public StatelessTokenPolicyBuilder tokenSecret(String secret) {
-            this.tokenSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            try {
+                this.tokenSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            } catch (WeakKeyException e) {
+                this.tokenSecretKey = null;
+                this.handleWeakKeyException("tokenSecret");
+                throw e;
+            }
             return this;
         }
 
@@ -159,7 +188,13 @@ public class StatelessTokenPolicy {
          * @return this builder instance
          */
         public StatelessTokenPolicyBuilder accessTokenSecret(String secret) {
-            this.accessTokenSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            try {
+                this.accessTokenSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            } catch (WeakKeyException e) {
+                this.accessTokenSecretKey = null;
+                this.handleWeakKeyException("accessTokenSecret");
+                throw e;
+            }
             return this;
         }
 
@@ -170,7 +205,13 @@ public class StatelessTokenPolicy {
          * @return this builder instance
          */
         public StatelessTokenPolicyBuilder refreshTokenSecret(String secret) {
-            this.refreshTokenSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            try {
+                this.refreshTokenSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            } catch (WeakKeyException e) {
+                this.refreshTokenSecretKey = null;
+                this.handleWeakKeyException("refreshTokenSecret");
+                throw e;
+            }
             return this;
         }
 
